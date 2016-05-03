@@ -14,7 +14,7 @@ function [data,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,
 % OUTPUT : data         Structure with all simulation input simulation data.
 %          FBP4D        Reconstructed dynamic FBP image in (Bq/cc). 
 %          OS4D         Reconstructed dynamic OSEM image in (Bq/cc). 
-%          OSpsf4D      Reconstructed dynamic OSEm w/ PSF image in (Bq/cc). 
+%          OSpsf4D      Reconstructed dynamic OSEM w/ PSF image in (Bq/cc). 
 %          counts       Pristine sinogram counts. 
 %          countsNoise  Noisy sinogram counts. 
 %******************************************************************************************************
@@ -143,7 +143,7 @@ parfor i = 1:noFrames
     if OS_OUT;    OS4D(:,:,:,i,:,:)    = output{ind}; ind=ind+1; end
     if OSpsf_OUT; OSpsf4D(:,:,:,i,:,:) = output{ind}; ind=ind+1; end
     counts(i)                          = output{ind}; ind=ind+1;
-    countsNoise(i)                     = output{ind}; ind=ind+1;
+    countsNoise(i)                     = output{ind};
 end
 fprintf('\nTime for frame loop: %.2f min\n',toc(littleClock)/60)
 clear output
@@ -156,7 +156,7 @@ if ~strcmp(halflife,'none')
     for i = 1:noFrames
         if FBP_OUT;   FBP4D(:,:,:,i,:)     = FBP4D(:,:,:,i,:)*decayCorr(i); end
         if OS_OUT;    OS4D(:,:,:,i,:,:)    = OS4D(:,:,:,i,:,:)*decayCorr(i); end
-        if OSpsf_OUT; OSpsf4D(:,:,:,i,:,:) = OSpsf4D(:,:,:,i,:)*decayCorr; end
+        if OSpsf_OUT; OSpsf4D(:,:,:,i,:,:) = OSpsf4D(:,:,:,i,:,:)*decayCorr(i); end
     end
 end
 
