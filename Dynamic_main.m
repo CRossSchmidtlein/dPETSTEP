@@ -1,8 +1,8 @@
-function [data,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,Cif,Cmean)
+function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,Cif,Cmean)
 %******************************************************************************************************
 % Run a complete dynamic PET simulation.
 %
-% USAGE  : simSet = Dynamic_main(data,frame,Cif,Cmean)
+% USAGE  : [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,Cif,Cmean)
 %
 % INPUT  : data     Structure input data.
 %          frame    Vector with start and end frame times in sec,
@@ -12,6 +12,7 @@ function [data,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,
 %                   (Scales sinograms which in turn determines noise level).
 %
 % OUTPUT : data         Structure with all simulation input simulation data.
+%          simSet       Structure with simulation settings.
 %          FBP4D        Reconstructed dynamic FBP image in (Bq/cc). 
 %          OS4D         Reconstructed dynamic OSEM image in (Bq/cc). 
 %          OSpsf4D      Reconstructed dynamic OSEM w/ PSF image in (Bq/cc). 
