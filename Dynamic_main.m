@@ -21,7 +21,9 @@ function [data,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,
 
 %% Save log file.
 logFile = 'Dynamic_main.log';
-delete(logFile);
+if exist(logFile, 'file')==2
+  delete(logFile);
+end
 diary(logFile);
 fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 
