@@ -51,13 +51,10 @@ OSpsf_OUT        = simSet.OSpsf_OUT;       % Flag to do OSEM with PSF or not.
 %% Mid frame time points.
 midFrame         = frame(1:end-1) + diff(frame)/2;
 
-%% Data file.
-dataTMP = data;
-
 %% Extract parametric image (PIM).
 % Extract all parameter images (K1, k2,...) from 'data' and store in 4D PIM image
 % where 4th dimension = parameter. Unit 1/sec for rate constants.
-pim = dataTMP(2).data;
+pim = data(2).data;
  
 %% Add biologic variability to PIM (gaussian noise).
 if addVariability
@@ -75,44 +72,44 @@ image4D     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'model
 fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
 
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
-voxSize = [ dataTMP(PIMscanNum).dataInfo.grid2Units dataTMP(PIMscanNum).dataInfo.grid1Units]; %unit (mm)
+voxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm)
 currFOV = [ voxSize(1)*size(image4D,1) voxSize(2)*size(image4D,2)]; %unit (mm)
 image4D = padarray( image4D, [round((fovSize-currFOV(1))/2),round((fovSize-currFOV(2))/2),0,0] );
 
 %% Add pristine 4D image to data structure
-tmpStruct = dataTMP(PIMscanNum).dataInfo;
+tmpStruct = data(PIMscanNum).dataInfo;
 tmpStruct = rmfield(tmpStruct,'sizeOfDimension4');
-dataTMP(PTscanNum).type                         = 'PT pristine';
-dataTMP(PTscanNum).data                         = image4D; %Bq/cc
-dataTMP(PTscanNum).Cif                          = Cif*CifScaleFactor; %Bq/cc
-dataTMP(PTscanNum).midFrame                     = midFrame;
-dataTMP(PTscanNum).dataInfo                     = tmpStruct;
-dataTMP(PTscanNum).dataInfo.sizeOfDimension1    = size(image4D,1);
-dataTMP(PTscanNum).dataInfo.sizeOfDimension2    = size(image4D,2);
-dataTMP(PTscanNum).dataInfo.imageUnit           = 'BQML';
-dataTMP(PTscanNum).dataInfo.numberOfDimensions  = 4;
-dataTMP(PTscanNum).dataInfo.timeUnit            = 's';
-dataTMP(PTscanNum).dataInfo.sizeOfDimensionTime = noFrames;
+data(PTscanNum).type                         = 'PT pristine';
+data(PTscanNum).data                         = image4D; %Bq/cc
+data(PTscanNum).Cif                          = Cif*CifScaleFactor; %Bq/cc
+data(PTscanNum).midFrame                     = midFrame;
+data(PTscanNum).dataInfo                     = tmpStruct;
+data(PTscanNum).dataInfo.sizeOfDimension1    = size(image4D,1);
+data(PTscanNum).dataInfo.sizeOfDimension2    = size(image4D,2);
+data(PTscanNum).dataInfo.imageUnit           = 'BQML';
+data(PTscanNum).dataInfo.numberOfDimensions  = 4;
+data(PTscanNum).dataInfo.timeUnit            = 's';
+data(PTscanNum).dataInfo.sizeOfDimensionTime = noFrames;
 clear tmpStruct
 
 %% Calculate voxel sizes, post filter, blurring kernels, mu-map etc.
 % Doesn't run any simulations, just sets the joint values of simX (most
 % values are the same for all frames).
-[vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETSTEP_overhead(dataTMP,simSet);
+[vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETSTEP_overhead(data,simSet);
 
 %% Initialize.
 if FBP_OUT
-    FBP4D   = zeros( simSet.simSize, simSet.simSize, dataTMP(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.nREP ); 
+    FBP4D   = zeros( simSet.simSize, simSet.simSize, data(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.nREP ); 
 else
     FBP4D   = [];
 end
 if OS_OUT    
-    OS4D    = zeros( simSet.simSize, simSet.simSize, dataTMP(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.iterNUM, simSet.nREP ); 
+    OS4D    = zeros( simSet.simSize, simSet.simSize, data(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.iterNUM, simSet.nREP ); 
 else 
     OS4D    = [];
 end
 if OSpsf_OUT
-    OSpsf4D = zeros( simSet.simSize, simSet.simSize, dataTMP(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.iterNUM, simSet.nREP ); 
+    OSpsf4D = zeros( simSet.simSize, simSet.simSize, data(PTscanNum).dataInfo.sizeOfDimension3, noFrames, simSet.iterNUM, simSet.nREP ); 
 else 
     OSpsf4D = [];
 end
@@ -138,7 +135,7 @@ littleClock = tic;
 parfor i = 1:noFrames
     fprintf('\nFrame no %d/%d...\n',i,noFrames);
     
-    output  = Dynamic_PETSTEP( dataTMP,simSet,i,vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale );
+    output  = Dynamic_PETSTEP( data,simSet,i,vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale );
     
     % Assign output
     ind = 1;
@@ -166,14 +163,11 @@ end
 %% End timing.
 fprintf('\nTotal time: %.2f min\n',toc(mainClock)/60)
 
-%% Put new data back in original data structure.
-data = dataTMP;
-
-% %% Clear variables.
+%% Clear variables.
 % clear PTscanNum PIMscanNum model CifScaleFactor halflife fovSize dt addVariability variabilityScale FBP_OUT OS_OUT OSpsf_OUT 
 % clear i logFile noFrames mainClock littleClock currFOV voxSize meanAct ind decayCorr doDecay lambda 
 % clear vox PSFsim PSFout POST scatterK FWAC initPT sensScale
-% clear pim image4D dataTMP
+% clear pim image4D data
 
 fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 diary off
