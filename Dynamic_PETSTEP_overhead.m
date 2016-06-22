@@ -23,7 +23,7 @@ function [vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETST
 % 
 % This file is part of the Dynamic PET Simulator for Tracers via Emission Projection (dPETSTEP) software.
 % 
-% dPETSTEP development has been led by:  Ida Häggström, Bradley J. Beattie and C. Ross Schmidtlein.
+% dPETSTEP development has been led by:  Ida Hï¿½ggstrï¿½m, Bradley J. Beattie and C. Ross Schmidtlein.
 % 
 % dPETSTEP has been financially supported by the Cancer Research Foundation in Northern Sweden, 
 % the US National Institutes of Health and the National Cancer Institute under multiple grants.
@@ -87,7 +87,10 @@ vox.muct.xyz = [ data(CTscanNum).dataInfo.grid2Units ...
                data(CTscanNum).dataInfo.grid1Units ...
                data(CTscanNum).dataInfo.grid3Units ];
 vox.muct.vol = prod(vox.muct.xyz);
-vox.muct.nxn = size(CTmuTmp);
+vox.muct.nxn = [ data(CTscanNum).dataInfo.sizeOfDimension1 ...
+                data(CTscanNum).dataInfo.sizeOfDimension2 ...
+                data(CTscanNum).dataInfo.sizeOfDimension3 ];
+% vox.muct.nxn = size(CTmuTmp);
 vox.muct.fov = vox.muct.nxn.*vox.muct.xyz;
 
 % Get Simulation PET/CT voxel size in mm and data
