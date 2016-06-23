@@ -1,4 +1,5 @@
-function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,Cif,Cmean)
+function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,FWscatters,FWrandoms,wcc] = Dynamic_main(data,frame,Cif,Cmean)
+% function [wcc] = Dynamic_main(data,frame,Cif,Cmean)
 %******************************************************************************************************
 % Run a complete dynamic PET simulation.
 %
@@ -12,7 +13,6 @@ function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data
 %                   (Scales sinograms which in turn determines noise level).
 %
 % OUTPUT : data         Structure with all simulation input simulation data.
-%          simSet       Structure with simulation settings.
 %          FBP4D        Reconstructed dynamic FBP image in (Bq/cc). 
 %          OS4D         Reconstructed dynamic OSEM image in (Bq/cc). 
 %          OSpsf4D      Reconstructed dynamic OSEM w/ PSF image in (Bq/cc). 
@@ -48,6 +48,12 @@ FBP_OUT          = simSet.FBP_OUT;         % Flag to do FBP or not.
 OS_OUT           = simSet.OS_OUT;          % Flag to do OSEM or not.
 OSpsf_OUT        = simSet.OSpsf_OUT;       % Flag to do OSEM with PSF or not.
 
+%% Check that axial post filter size is ok for size of data
+if size(data(PIMscanNum).data,3) < numel(simSet.zFilter)
+	msg = sprintf('You have specified an axial postfilter of size %.0f, but your data is of axial size %.0f. The postfilter size must be less than or equal to your data.',numel(simSet.zFilter),size(data(PIMscanNum).data,3) );
+	error(msg);
+end
+
 %% Mid frame time points.
 midFrame         = frame(1:end-1) + diff(frame)/2;
 
@@ -70,6 +76,9 @@ image4D     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'model
     'doParallell',0,'doDecay',halflife); %Bq/cc
 
 fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
+
+simSet.activityConc = squeeze(sum(sum(image4D,2),1));
+simSet.activityConc = simSet.activityConc/max(simSet.activityConc)*1e6./diff(frame);
 
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
 voxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm)
@@ -129,6 +138,11 @@ for i = 1:noFrames
     countsNoise(i).NEC      = 0;
     countsNoise(i).ID       = 0;
 end
+nFWprompts = zeros( [vox.petSim.rtz noFrames simSet.nREP] );
+FWtrues    = zeros( [vox.petSim.rtz noFrames] );
+FWscatters = zeros( [vox.petSim.rtz noFrames] );
+FWrandoms  = zeros( [vox.petSim.rtz noFrames] );
+wcc        = zeros( vox.petOut.nxn(3),noFrames );
 
 %% Loop over all frames of the pristine 4D image and simulate each frame with PETSTEP.
 littleClock = tic;
@@ -143,7 +157,12 @@ parfor i = 1:noFrames
     if OS_OUT;    OS4D(:,:,:,i,:,:)    = output{ind}; ind=ind+1; end
     if OSpsf_OUT; OSpsf4D(:,:,:,i,:,:) = output{ind}; ind=ind+1; end
     counts(i)                          = output{ind}; ind=ind+1;
-    countsNoise(i)                     = output{ind};
+    countsNoise(i)                     = output{ind}; ind=ind+1;
+    nFWprompts(:,:,:,i)                = output{ind}; ind=ind+1;
+    FWtrues(:,:,:,i)                   = output{ind}; ind=ind+1;
+    FWscatters(:,:,:,i)                = output{ind}; ind=ind+1;
+    FWrandoms(:,:,:,i)                 = output{ind}; ind=ind+1;
+    wcc(:,i)                           = output{ind};
 end
 fprintf('\nTime for frame loop: %.2f min\n',toc(littleClock)/60)
 clear output
@@ -167,7 +186,7 @@ fprintf('\nTotal time: %.2f min\n',toc(mainClock)/60)
 % clear PTscanNum PIMscanNum model CifScaleFactor halflife fovSize dt addVariability variabilityScale FBP_OUT OS_OUT OSpsf_OUT 
 % clear i logFile noFrames mainClock littleClock currFOV voxSize meanAct ind decayCorr doDecay lambda 
 % clear vox PSFsim PSFout POST scatterK FWAC initPT sensScale
-% clear pim image4D data
+% clear pim image4D dataTMP
 
 fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 diary off
