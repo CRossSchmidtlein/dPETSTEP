@@ -1,23 +1,28 @@
-function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,FWscatters,FWrandoms,wcc] = Dynamic_main(data,frame,Cif,Cmean)
-% function [wcc] = Dynamic_main(data,frame,Cif,Cmean)
+function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,FWscatters,FWrandoms,wcc] = Dynamic_main(data,frame,Cif,scaleFactor)
+% function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,FWscatters,FWrandoms,wcc] = Dynamic_main(data,frame,Cif,scaleFactor)
 %******************************************************************************************************
 % Run a complete dynamic PET simulation.
 %
-% USAGE  : [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise] = Dynamic_main(data,frame,Cif,Cmean)
+% USAGE  : [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,FWscatters,FWrandoms,wcc] = Dynamic_main(data,frame,Cif,scaleFactor)
 %
-% INPUT  : data     Structure input data.
-%          frame    Vector with start and end frame times in sec,
-%                   [frameStart1; frameStart2=frameEnd1; frameStart3=frameEnd2;...].
-%          Cif      Vector with input function to model (AIF or reference tissue TAC).
-%          Cmean    Average activity for each frame of the simulation in (Bq/cc). 
-%                   (Scales sinograms which in turn determines noise level).
+% INPUT  : data         Structure with all simulation input data.
+%          frame        Vector with start and end frame times in sec,
+%                       [frameStart1; frameStart2=frameEnd1; frameStart3=frameEnd2;...].
+%          Cif          Vector with input function to model (AIF or reference tissue TAC).
+%          scaleFactor  Scalar scalefactor for sinograms which determines noise level.
 %
-% OUTPUT : data         Structure with all simulation input simulation data.
+% OUTPUT : data         Structure with all simulation input data, updated.
+%          simSet       Structure with simulation settings.
 %          FBP4D        Reconstructed dynamic FBP image in (Bq/cc). 
 %          OS4D         Reconstructed dynamic OSEM image in (Bq/cc). 
 %          OSpsf4D      Reconstructed dynamic OSEM w/ PSF image in (Bq/cc). 
 %          counts       Pristine sinogram counts. 
 %          countsNoise  Noisy sinogram counts. 
+%          nFWprompts   Noisy prompts sinogram.
+%          FWtrue       Noiseless true sinogram.
+%          FWscatters   Noiseless scatters sinogram.
+%          FWrandoms    Noiseless randoms sinogram.
+%          wcc          Well-counter-calibration factor to get unit Bq/cc.
 %******************************************************************************************************
 
 %% Save log file.
@@ -40,6 +45,7 @@ noFrames         = numel(frame)-1;         % Number of time points.
 model			 = simSet.kineticModel;    % Desired kinetic model.
 CifScaleFactor   = simSet.CifScaleFactor;  % Input function Cif scale factor. Multiply Cif with factor.
 halflife         = simSet.halflife;        % Halflife of nuclide in sec. Can also be 'none' for no decay.
+interpMethod     = simSet.interpMethod;    % Desired interpolation method.
 dt               = simSet.timeStep;        % Convolution time step in sec.
 fovSize          = simSet.fovSize;         % Size of FOV. Voxel size = fovSize/simSize.
 addVariability   = simSet.addVariability;  % Flag to add biologic variability (gaussian noise) or not.
@@ -73,12 +79,13 @@ end
 littleClock = tic;
 image4D     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'model',model,...
     'frame',frame,'dt',dt,'Cif',Cif,'CifScaling',CifScaleFactor,...
-    'doParallell',0,'doDecay',halflife); %Bq/cc
+    'doParallell',0,'doDecay',halflife,'interpMethod',interpMethod); %Bq/cc
 
 fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
 
-simSet.activityConc = squeeze(sum(sum(image4D,2),1));
-simSet.activityConc = simSet.activityConc/max(simSet.activityConc)*1e6./diff(frame);
+%% Scale factor to scale sinogram counts with.
+activityConc        = squeeze(sum(sum(image4D,2),1));                               %unit Bq/cc
+simSet.activityConc = scaleFactor*activityConc/max(activityConc)./diff(frame)/1000; %unit kBq/cc per sec
 
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
 voxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm)

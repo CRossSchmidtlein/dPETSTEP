@@ -1,5 +1,4 @@
 function simSet = Dynamic_setSimParameters(frame,Cif,Cmean)
-%%
 %******************************************************************************************************
 % Sets dPETSTEP simulation parameters.
 %
@@ -58,22 +57,23 @@ simSet.dwellTime      = diff(frame);    % Frame lengths.
 simSet.Cif            = Cif;            % Vector with input function in Bq/cc. Either arterial input function.
                                         % or reference tissue TAC, depending on what model you use.
 simSet.CifScaleFactor = 1;              % Scale factor to multiply the supplied input function with.
-simSet.activityConc   = Cmean/1000;     % Mean background activity concentration in (kBq/ml).
-simSet.halflife       = 6.5863e+03;     % Halflife of nuclide in sec, or 'none' for no decay.
+simSet.halflife       = 'none';         % Halflife of nuclide in sec, or 'none' for no decay.
 simSet.timeStep       = 0.5;            % Convolution time step in sec.
-simSet.kineticModel   = '2-Tissue';		% Desired kinetic model, '1-Tissue', '2-Tissue', 'FRTM', 'SRTM' or 'sumExp'.
+simSet.interpMethod   = 'linear';        % Interpolation method.
+% simSet.kineticModel   = '2-Tissue';		% Desired kinetic model, '1-Tissue', '2-Tissue', 'FRTM', 'SRTM' or 'sumExp'.
+simSet.kineticModel   = 'sumExp';		% Desired kinetic model, '1-Tissue', '2-Tissue', 'FRTM', 'SRTM' or 'sumExp'.
 
 % scanner charaterisitics
-simSet.RingData   = 880;        % the diameter of the scanner ring (GE DLS)
+simSet.RingData   = 430%880;        % the diameter of the scanner ring (GE DLS)
 simSet.tanBin     = 336;        % Sets inital projetion data size (GE DLS)
 simSet.maxRingDiff= 11;         % Maximum allowed ring difference
 simSet.psf        = 5.1;        % Assumes a PSF for the system, uses same for correction. FWHM.
 simSet.blurT      = 5.1;        % DLS
 
 % image reconstruction definitions
-simSet.fovSize    = 331;        % size of dynamic image FOV in mm. Voxel size = fovSize/simSize.
-simSet.simSize    = 165;        % matrix size of reconstructed image
-simSet.zFilter    = [1 2 1];    % post recon Z-axis filter 3-point smoothing
+simSet.fovSize    = 128;        % size of dynamic image FOV in mm. Voxel size = fovSize/simSize.
+simSet.simSize    = 128;        % matrix size of reconstructed image
+simSet.zFilter    = [1];    % post recon Z-axis filter 3-point smoothing
                                 % Heavy[ 1 2 1]/4, Standard[1 4 1]/6, Light[1 6 1]/8, None[0 1 0]
 simSet.postFilter = 6;          % FWHM in (mm) of post reconstruction filter. FWHM = 2*sqrt(2*log(2))*sigma.
 simSet.iterNUM    = 5;          % number of iterations
@@ -84,8 +84,8 @@ simSet.addVariability   = false;  % Flag to add biologic variability or not
 simSet.variabilityScale = 10;     % Scale factor of variability (variance of gaussian noise = image/scale)
 
 % Reconstructions
-simSet.FBP_OUT       = false;
-simSet.OS_OUT        = true;
+simSet.FBP_OUT       = 0;
+simSet.OS_OUT        = false;
 simSet.OSpsf_OUT     = false;
 
 % number of replicate data sets

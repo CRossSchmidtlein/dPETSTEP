@@ -101,13 +101,11 @@ end
 %% Perform Recons
 for i = 1:nREP
     % add noise to projection data
-    
     [nFWPTtotal,~,~,~,countsNoise] = ...
         noiseProjData(FWPTtrue,FWPTscatter,FWPTrandoms);
     countsNoise.ID      = countsNoise.NEC / prod( vox.petOut.nxn );
 
     % Recon Data
-    
     if (FBP_OUT)
         [FBP(:,:,:,i)] = ...
             recon_fbpSimData_nonUniformSliceSens( ...
@@ -149,7 +147,12 @@ if OSpsf_OUT
     output{ind} = OSpsf;
     ind = ind + 1;
 end
-output{ind}   = counts;
-output{end+1} = countsNoise;
+output{ind}   = counts;      ind = ind + 1;
+output{ind}   = countsNoise; ind = ind + 1;
+output{ind}   = nFWPTtotal;  ind = ind + 1;
+output{ind}   = FWPTtrue;    ind = ind + 1;
+output{ind}   = FWPTscatter; ind = ind + 1;
+output{ind}   = FWPTrandoms; ind = ind + 1;
+output{ind}   = wcc;
 
 return
