@@ -37,7 +37,7 @@ fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 mainClock = tic;
 
 %% Sim settings.
-simSet           = Dynamic_setSimParameters(frame,Cif,Cmean); %Initialize settings according to user specification
+simSet           = Dynamic_setSimParameters(frame,Cif); %Initialize settings according to user specification
 
 PIMscanNum       = simSet.PIMscanNum;      % PIM scan's ID.
 PTscanNum        = simSet.PTscanNum;       % PT  scan's ID.

@@ -1,14 +1,12 @@
-function simSet = Dynamic_setSimParameters(frame,Cif,Cmean)
+function simSet = Dynamic_setSimParameters(frame,Cif)
 %******************************************************************************************************
 % Sets dPETSTEP simulation parameters.
 %
-% USAGE  : simSet = Dynamic_setSimParameters(frame,Cif,Cmean)
+% USAGE  : simSet = Dynamic_setSimParameters(frame,Cif)
 %
 % INPUT  : frame    Vector with start and end frame times in sec,
 %                   [frameStart1; frameStart2=frameEnd1; frameStart3=frameEnd2;...].
 %          Cif      Vector with input function to model (AIF or reference tissue TAC).
-%          Cmean    Average activity for each frame of the simulation in (Bq/cc). 
-%                   (Scales sinograms which in turn determines noise level).
 %
 % OUTPUT : simSet  Structure with all simulation settings
 %******************************************************************************************************
