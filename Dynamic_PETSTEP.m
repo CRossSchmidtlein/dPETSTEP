@@ -3,9 +3,9 @@ function output = Dynamic_PETSTEP(data,simSet,frameNo,vox,PSFsim,PSFout,POST,sca
 %*******************************************************************************************************
 %| Simulates an FBP, OSEM and OSEMpsf image from a pristine image.                                     |
 %|                                                                                                     |
-%| IH, 19/04/2016                                                                                      |
+%| IH, 26/09/2016                                                                                      |
 %|                                                                                                     |
-%| USAGE  :  [FBP,OS,OSpsf,counts,countsNoise] = Dynamic_PETSTEP(data,simSet,frameNo,vox,...           |
+%| USAGE  :  output = Dynamic_PETSTEP(data,simSet,frameNo,vox,...                                      |
 %|                             PSFsim,PSFout,POST,scatterK,FWAC,initPT)                                |
 %|                                                                                                     |
 %| INPUT  :  data           Structure with 4D PT and 3D CT data.                                       |
@@ -24,7 +24,11 @@ function output = Dynamic_PETSTEP(data,simSet,frameNo,vox,PSFsim,PSFout,POST,sca
 %|           OSpsf          Matrix with simulated PSF corrected OSEM image.                            |
 %|           counts         Structure with pristine sinogram counts.                                   |
 %|           countsNoise    Structure with noised sinogram counts.                                     |
-%|                                                                                                     |
+%|           nFWprompts     Matrix with noisy prompt (total) counts sinogram.                          |
+%|           FWtrues        Matrix with pristine true counts sinogram.                                 |
+%|           FWscatters     Matrix with pristine scatter counts sinogram.                              |
+%|           FWrandoms      Matrix with pristine random counts sinogram.                               |
+%|           wcc            2D matrix with well counter calibration factor per slice per frame.        |
 %*******************************************************************************************************
 % Copyright 2016, C. Ross Schmidtlein, on behalf of the dPETSTEP development team.
 % 

@@ -9,7 +9,7 @@ function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,F
 %          frame        Vector with start and end frame times in sec,
 %                       [frameStart1; frameStart2=frameEnd1; frameStart3=frameEnd2;...].
 %          Cif          Vector with input function to model (AIF or reference tissue TAC).
-%          scaleFactor  Scalar scalefactor for sinograms which determines noise level.
+%          scaleFactor  Scale factor for sinograms (=mean activity), unit [Bq]. Determines noise level.
 %
 % OUTPUT : data         Structure with all simulation input data, updated.
 %          simSet       Structure with simulation settings.
