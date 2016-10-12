@@ -9,7 +9,7 @@ function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,F
 %          frame        Vector with start and end frame times in sec,
 %                       [frameStart1; frameStart2=frameEnd1; frameStart3=frameEnd2;...].
 %          Cif          Vector with input function to model (AIF or reference tissue TAC).
-%          scaleFactor  Scale factor for sinograms (=mean activity), unit [Bq]. Determines noise level.
+%          scaleFactor  Scalar scalefactor for sinograms which determines noise level.
 %
 % OUTPUT : data         Structure with all simulation input data, updated.
 %          simSet       Structure with simulation settings.
@@ -28,8 +28,10 @@ function [data,simSet,FBP4D,OS4D,OSpsf4D,counts,countsNoise,nFWprompts,FWtrues,F
 %% Save log file.
 logFile = 'Dynamic_main.log';
 if exist(logFile, 'file')==2
-  delete(logFile);
+    fprintf('\nDeleting old log-file "%s" to create new.\n\n',logFile);
+    delete(logFile);
 end
+diary off
 diary(logFile);
 fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 
@@ -47,7 +49,7 @@ CifScaleFactor   = simSet.CifScaleFactor;  % Input function Cif scale factor. Mu
 halflife         = simSet.halflife;        % Halflife of nuclide in sec. Can also be 'none' for no decay.
 interpMethod     = simSet.interpMethod;    % Desired interpolation method.
 dt               = simSet.timeStep;        % Convolution time step in sec.
-fovSize          = simSet.fovSize;         % Size of FOV. Voxel size = fovSize/simSize.
+FOV              = simSet.fovSize;         % Size of FOV. Voxel size = fovSize/simSize.
 addVariability   = simSet.addVariability;  % Flag to add biologic variability (gaussian noise) or not.
 variabilityScale = simSet.variabilityScale;% Scale factor of biologic variability.
 FBP_OUT          = simSet.FBP_OUT;         % Flag to do FBP or not.
@@ -77,20 +79,43 @@ end
 % Arguments are the PIM, desired kinetic model, vector of frame start and
 % stop times and arterial input function. Also, specify if wanting to use Matlabs parallell computing. 
 littleClock = tic;
-image4D     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'model',model,...
+image4Dunpad     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'model',model,...
     'frame',frame,'dt',dt,'Cif',Cif,'CifScaling',CifScaleFactor,...
     'doParallell',0,'doDecay',halflife,'interpMethod',interpMethod); %Bq/cc
 
 fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
 
 %% Scale factor to scale sinogram counts with.
-activityConc        = squeeze(sum(sum(image4D,2),1));                               %unit Bq/cc
+activityConc        = squeeze(sum(sum(sum(image4Dunpad,3),2),1));                        %unit Bq/cc
 simSet.activityConc = scaleFactor*activityConc/max(activityConc)./diff(frame)/1000; %unit kBq/cc per sec
 
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
-voxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm)
-currFOV = [ voxSize(1)*size(image4D,1) voxSize(2)*size(image4D,2)]; %unit (mm)
-image4D = padarray( image4D, [round((fovSize-currFOV(1))/2),round((fovSize-currFOV(2))/2),0,0] );
+phantomVoxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm/voxel)
+phantomFOV1    = [ phantomVoxSize(1)*size(image4Dunpad,1) phantomVoxSize(2)*size(image4Dunpad,2)]; %unit (mm)
+phantomMatSize = [size(image4Dunpad,1) size(image4Dunpad,2)];
+padSize1       = [ FOV-phantomFOV1(1) FOV-phantomFOV1(2)]; %crop or pad with zeros to make square. Unit (mm)
+if padSize1(1)<0
+    keepIndex  = round( [ -padSize1(1)/2 phantomMatSize(1) + padSize1(1)/2 - 1 ] );
+    image4Dtmp = image4Dunpad( keepIndex(1):keepIndex(2),:,:,: ); 
+else
+    image4Dtmp = image4Dunpad;
+end
+if padSize1(2)<0
+    keepIndex  = round( [ -padSize1(2)/2 phantomMatSize(2) + padSize1(2)/2 - 1 ] );
+    image4Dtmp = image4Dtmp( :,keepIndex(1):keepIndex(2),:,: );
+else
+    image4Dtmp = image4Dtmp;
+end
+phantomFOV2    = [ phantomVoxSize(1)*size(image4Dtmp,1) phantomVoxSize(2)*size(image4Dtmp,2)]; %unit (mm)
+padSize2       = [ FOV-phantomFOV2(1) FOV-phantomFOV2(2)]; %crop or pad with zeros to make square. Unit (mm)   
+image4D        = padarray( image4Dtmp, [round(padSize2(1)*phantomVoxSize(1)/2) round(padSize2(2)*phantomVoxSize(2)/2) 0 0] );
+% Make sure correct FOV. Crop one row / col if needed.
+if size(image4D,1)*phantomVoxSize(1) > FOV;    image4D = image4D(1:end-1,:,:,:);    end
+if size(image4D,2)*phantomVoxSize(2) > FOV;    image4D = image4D(:,1:end-1,:,:);    end
+% Print info
+fprintf('Your desired square image FOV is %g mm (%d voxels), and your original phantom FOV is %gx%g mm (%dx%d voxels).\n',...
+            FOV,simSet.simSize,phantomFOV1(1),phantomFOV1(2),size(image4Dunpad,1),size(image4Dunpad,2));
+fprintf('  --> Phantom will be padded/cropped to %gx%g mm (%dx%d voxels) to yield desired output size.\n',size(image4D,1)*phantomVoxSize(1),size(image4D,2)*phantomVoxSize(1),size(image4D,1),size(image4D,2));
 
 %% Add pristine 4D image to data structure
 tmpStruct = data(PIMscanNum).dataInfo;
@@ -152,8 +177,9 @@ FWrandoms  = zeros( [vox.petSim.rtz noFrames] );
 wcc        = zeros( vox.petOut.nxn(3),noFrames );
 
 %% Loop over all frames of the pristine 4D image and simulate each frame with PETSTEP.
+% The "for" loop can be swhitched to "parfor" if multiple CPUs are available.
 littleClock = tic;
-parfor i = 1:noFrames
+for i = 1:noFrames
     fprintf('\nFrame no %d/%d...\n',i,noFrames);
     
     output  = Dynamic_PETSTEP( data,simSet,i,vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale );
