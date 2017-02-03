@@ -87,7 +87,7 @@ fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
 
 %% Scale factor to scale sinogram counts with.
 activityConc        = squeeze(sum(sum(sum(image4Dunpad,3),2),1));                        %unit Bq/cc
-simSet.activityConc = scaleFactor*activityConc/max(activityConc)./diff(frame)/1000; %unit kBq/cc per sec
+simSet.activityConc = scaleFactor*activityConc/max(activityConc)/1000; %unit kBq/cc per sec
 
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
 phantomVoxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm/voxel)
