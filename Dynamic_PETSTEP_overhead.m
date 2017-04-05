@@ -1,4 +1,4 @@
-function [vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETSTEP_overhead(data,simSet)
+function [vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale,activityConc] = Dynamic_PETSTEP_overhead(data,simSet)
 %%
 %******************************************************************************************************
 % Calculates voxel sizes, attenuation factors, initial PET etc.
@@ -46,6 +46,7 @@ function [vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETST
 %% input parameters
 PTscanNum  = simSet.PTscanNum;       % PET scan's ID : should be automated
 CTscanNum  = simSet.CTscanNum;       % CT  scan's ID : should be automated
+noFrames   = size(data(CTscanNum).data,4);
 
 % scanner charaterisitics
 ringData   = simSet.RingData;     % the ring diameter of the scanner's data acquisition (810 mm GE D690)
@@ -104,7 +105,8 @@ vox.petSim.r   = 2*ceil(norm( vox.petSim.nxn(1:2) - floor(( vox.petSim.nxn(1:2)-
 vox.petSim.tan = tanBin;
 vox.petSim.rtz = [ 2*ceil(norm( vox.petSim.nxn(1:2) - floor(( vox.petSim.nxn(1:2)-1 )/2)-1)) + 3 ...
                    tanBin vox.pet.nxn(3) ];
-vox.petSim;
+vox.petSim
+
 % Get Output Image PET voxel size in mm and data
 vox.petOut.xyz = vox.pet.xyz .* [ vox.pet.nxn(1:2)/simSize 1 ];
 vox.petOut.vol = prod(vox.petOut.xyz);
@@ -136,6 +138,7 @@ fwhm        = psf * vox.petOut.nxn(1) / vox.pet.fov(1);
 fwhmMat     = max( ceil(3*fwhm) , 5 );
 if (mod(fwhmMat,2) == 0), fwhmMat = fwhmMat + 1; end
 PSFout     = fspecial('gaussian', fwhmMat, fwhm / ( 2*sqrt(2*log(2)) ) );
+
 % Post smoothing kernel matched to output size
 fwhmPost    = postFilter * vox.petOut.nxn(1) / vox.pet.fov(1);
 fwhmMatPost = max( ceil(3*fwhmPost) , 5 );
@@ -152,41 +155,47 @@ end
 scatterK     = fspecial('gaussian',fwhmMat, fwhmS / ( 2*sqrt(2*log(2)) ) );
 
 %% Rescale mumap image
-CTmu   = zeros(vox.petSim.nxn);
-for i = 1:vox.petSim.nxn(3)
-    if (isempty(CTmuTmp))
-        CTmu = [];
-    else 
-        % pad CT to match PET
-        CTmuTmp0  = zeros(vox.petSim.nxn(1:2));
-        CTmuTmp1  = imresize(CTmuTmp(:,:,i),vox.muct.xyz(1)/vox.petSim.xyz(1),'cubic');
-        
-        xA = max(1,round(( vox.petSim.nxn(1) - size(CTmuTmp1,2) )/2) + 1);
-        xB = xA + size(CTmuTmp1,2) - 1;
-        yA = max(1,round(( vox.petSim.nxn(1) - size(CTmuTmp1,1) )/2) + 1);
-        yB = yA + size(CTmuTmp1,1) - 1;
-        
-        CTmuTmp0(yA:yB,xA:xB) = CTmuTmp1;
-        CTmu(:,:,i) = imresize( CTmuTmp0,vox.petSim.nxn(1:2), 'cubic' );
+CTmu   = zeros([vox.petSim.nxn noFrames]);
+for j = 1:noFrames
+    for i = 1:vox.petSim.nxn(3)
+        if (isempty(CTmuTmp))
+            CTmu(:,:,:,j) = [];
+        else
+            % pad CT to match PET
+            tmp0  = zeros(vox.petSim.nxn(1:2));
+            tmp1  = imresize(CTmuTmp(:,:,i,j),vox.muct.xyz(1)/vox.petSim.xyz(1),'cubic');
+            
+            xA = max(1,round(( vox.petSim.nxn(1) - size(tmp1,2) )/2) + 1);
+            xB = xA + size(tmp1,2) - 1;
+            yA = max(1,round(( vox.petSim.nxn(1) - size(tmp1,1) )/2) + 1);
+            yB = yA + size(tmp1,1) - 1;
+            
+            tmp0(yA:yB,xA:xB) = tmp1;
+            CTmu(:,:,i,j) = imresize( tmp0,vox.petSim.nxn(1:2), 'cubic' );
+        end
     end
 end
 CTmu(CTmu < 0)     = 0; % Alignment verified
 % Blur with PSF
-for i = 1:vox.petSim.nxn(3)
-    CTmu(:,:,i)    = imfilter(CTmu(:,:,i),   PSFsim,      'replicate','same','conv');
+for j = 1:noFrames
+    for i = 1:vox.petSim.nxn(3)
+        CTmu(:,:,i,j)    = imfilter(CTmu(:,:,i,j),   PSFsim,      'replicate','same','conv');
+    end
 end
 
 %% Forward project attenuation image (mumap)
 PHI         = 0:180/vox.petSim.rtz(2):180*(1-1/vox.petSim.rtz(2));
-FWAC        = ones([vox.petSim.rtz(1) vox.petSim.rtz(2) vox.petSim.rtz(3)]);
-for i = 1:vox.petSim.rtz(3)
-    if (isempty(CTmu))
-        FWAC(:,:,i) = ones([vox.petSim.rtz(1) vox.petSim.rtz(2)]);
-    else
-        FWAC(:,:,i) = exp( -( vox.pet.xyz(1) * vox.pet.nxn(1) / vox.petSim.nxn(1) )/10 * ...
-            radon( CTmu(:,:,i), PHI ) );
-    end % Alignment verified
-end    
+FWAC        = ones([vox.petSim.rtz(1) vox.petSim.rtz(2) vox.petSim.rtz(3) noFrames]);
+for j = 1:noFrames
+    for i = 1:vox.petSim.rtz(3)
+        if (isempty(CTmu))
+            FWAC(:,:,i,j) = ones([vox.petSim.rtz(1) vox.petSim.rtz(2)]);
+        else
+            FWAC(:,:,i,j) = exp( -( vox.pet.xyz(1) * vox.pet.nxn(1) / vox.petSim.nxn(1) )/10 * ...
+                radon( CTmu(:,:,i,j), PHI ) );
+        end % Alignment verified
+    end
+end
 FWAC(FWAC > 1) = 1;
 
 %Initial PET
@@ -197,5 +206,33 @@ disk   = x2(ones(vox.petOut.nxn(1),1),:) + x2(ones(1,vox.petOut.nxn(1)),:)' <= (
 for i  = 1:vox.petOut.nxn(3)
     initPT(:,:,i) = disk;
 end
+
+% Attenuationed total activity per frame
+%% Activity concentration used to scale sinogram counts with. 
+uptakeData   = zeros([vox.petSim.nxn size(data(PTscanNum).data,4)]); %Unattenuated
+for j = 1:size(data(PTscanNum).data,4)
+    for i = 1:vox.petSim.nxn(3)
+        % pad to match PET
+        tmp0  = zeros(vox.petSim.nxn(1:2));
+        tmp1  = imresize(data(PTscanNum).data(:,:,i,j),vox.pet.xyz(1)/vox.petSim.xyz(1),'cubic');
+        
+        xA = max(1,round(( vox.petSim.nxn(1) - size(tmp1,2) )/2) + 1);
+        xB = xA + size(tmp1,2) - 1;
+        yA = max(1,round(( vox.petSim.nxn(1) - size(tmp1,1) )/2) + 1);
+        yB = yA + size(tmp1,1) - 1;
+        
+        tmp0(yA:yB,xA:xB) = tmp1;
+        uptakeData(:,:,i,j) = imresize( tmp0,vox.petSim.nxn(1:2), 'cubic' );
+    end
+end
+uptakeData(uptakeData < 0)     = 0; % Alignment verified
+FWuptakeData = ones([vox.petSim.rtz(1:3) size(data(PTscanNum).data,4)]);
+for j = 1:size(data(PTscanNum).data,4)
+    for i = 1:vox.petSim.rtz(3)
+        FWuptakeData(:,:,i,j) = FWAC.*radon( uptakeData(:,:,i,j), PHI );
+    end
+end
+activityConc = sum( reshape(FWuptakeData,[prod(vox.petSim.rtz) size(data(PTscanNum).data,4)]),1 );
+activityConc = activityConc/max(activityConc); %normalized
 
 return

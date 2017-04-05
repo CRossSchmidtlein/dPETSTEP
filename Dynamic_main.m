@@ -85,10 +85,6 @@ image4Dunpad     = createDynamicPETfromParametricImage_matrix('paramImage',pim,'
 
 fprintf('\nTime for dynamic image generation: %.2f sec\n',toc(littleClock))
 
-%% Scale factor to scale sinogram counts with.
-activityConc        = squeeze(sum(sum(sum(image4Dunpad,3),2),1));                        %unit Bq/cc
-simSet.activityConc = scaleFactor*activityConc/max(activityConc)/1000; %unit kBq/cc
-
 %% Pad 4D data with zeros or crop to get square and wanted recon voxel size and FOV.
 phantomVoxSize = [ data(PIMscanNum).dataInfo.grid2Units data(PIMscanNum).dataInfo.grid1Units]; %unit (mm/voxel)
 phantomFOV1    = [ phantomVoxSize(1)*size(image4Dunpad,1) phantomVoxSize(2)*size(image4Dunpad,2)]; %unit (mm)
@@ -136,7 +132,9 @@ clear tmpStruct
 %% Calculate voxel sizes, post filter, blurring kernels, mu-map etc.
 % Doesn't run any simulations, just sets the joint values of simX (most
 % values are the same for all frames).
-[vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale] = Dynamic_PETSTEP_overhead(data,simSet);
+[vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale,activityConc] = Dynamic_PETSTEP_overhead(data,simSet);
+%Activity concentration used to scale sinograms
+simSet.activityConc = scaleFactor*activityConc/1000; %unit scaled kBq/cc
 
 %% Initialize.
 if FBP_OUT
@@ -215,12 +213,7 @@ end
 %% End timing.
 fprintf('\nTotal time: %.2f min\n',toc(mainClock)/60)
 
-%% Clear variables.
-% clear PTscanNum PIMscanNum model CifScaleFactor halflife fovSize dt addVariability variabilityScale FBP_OUT OS_OUT OSpsf_OUT 
-% clear i logFile noFrames mainClock littleClock currFOV voxSize meanAct ind decayCorr doDecay lambda 
-% clear vox PSFsim PSFout POST scatterK FWAC initPT sensScale
-% clear pim image4D dataTMP
-
+%% Print date and time.
 fprintf('%d-%02d-%02d, %02d:%02d:%02.0f\n',clock)
 diary off
 
