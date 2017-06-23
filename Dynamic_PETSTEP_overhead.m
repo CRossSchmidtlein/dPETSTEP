@@ -229,7 +229,7 @@ uptakeData(uptakeData < 0)     = 0; % Alignment verified
 FWuptakeData = ones([vox.petSim.rtz(1:3) size(data(PTscanNum).data,4)]);
 for j = 1:size(data(PTscanNum).data,4)
     for i = 1:vox.petSim.rtz(3)
-        FWuptakeData(:,:,i,j) = FWAC.*radon( uptakeData(:,:,i,j), PHI );
+        FWuptakeData(:,:,i,j) = FWAC(:,:,i).*radon( uptakeData(:,:,i,j), PHI );
     end
 end
 activityConc = sum( reshape(FWuptakeData,[prod(vox.petSim.rtz) size(data(PTscanNum).data,4)]),1 );
