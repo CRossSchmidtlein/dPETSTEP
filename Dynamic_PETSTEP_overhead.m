@@ -234,5 +234,4 @@ for j = 1:size(data(PTscanNum).data,4)
 end
 activityConc = sum( reshape(FWuptakeData,[prod(vox.petSim.rtz) size(data(PTscanNum).data,4)]),1 );
 activityConc = activityConc/max(activityConc); %normalized
-
 return
