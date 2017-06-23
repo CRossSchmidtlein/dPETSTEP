@@ -171,6 +171,9 @@ end
 if ~exist('noCPU','var')
     fprintf('DEFAULT: Using single CPU.\n')
     parforArg = 0;
+elseif nCPU==1
+    fprintf('Using single CPU.\n')
+    parforArg = 0;
 else
     fprintf('Using %d CPUs.\n',noCPU)
     parforArg = noCPU;
