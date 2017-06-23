@@ -24,7 +24,8 @@ function paramImage = modelFitting_main(varargin)
 %|                                    'interpMethod',string,...                                     |
 %|                                    'solver',string,...                                           |
 %|                                    'lowerBound', [lb_1 lb_2...lb_N],...                          |
-%|                                    'upperBound', [ub_1 ub_2...ub_N].                             |
+%|                                    'upperBound', [ub_1 ub_2...ub_N],...                          |
+%|                                    'noCPU', noCPU)                                               |
 %|                                                                                                  |
 %| INPUT  :   image         4D matrix with dynamic image, unit (arbitrary), e.g. (Bq/ml).           |
 %|                          image = [nx,ny,nz,f-1].                                                 |
@@ -58,6 +59,7 @@ function paramImage = modelFitting_main(varargin)
 %|                          lowerBound = [1,N]. Default 0 for all parameters.                       |
 %|            upperBound    Vector with upper bound for parameters, unit (1/s) for rate constants.  |
 %|                          upperBound = [1,N]. Default 100*p0.                                     |
+%|            noCPU         Number of CPUs to use (for voxelwise fitting). Default 1.               |
 %|                                                                                                  |
 %| OUTPUT :   paramImage    1) No ROIMask: 4D matrix with parametric image (3D image with a 4th     |
 %|                          parameter dimension), unit (1/s) for rate constants.                    |
@@ -133,6 +135,8 @@ for i=1:2:numel(varargin)-1
             lowerBound   = varargin{i+1};  % Vector with lower bounds for parameters.
         case 'upperBound'
             upperBound   = varargin{i+1};  % Vector with upper bounds for parameters.
+        case 'noCPU'
+            noCPU   = varargin{i+1};  % Scalar with number of CPUs to use (Default 1).
         otherwise
             fprintf('Unknown argument ''%s''.\nExiting...\n',varargin{i});
             paramImage = []; 
@@ -161,6 +165,15 @@ if ~exist('upperBound','var')
 end
 if ~exist('solver','var')
     solver = [];
+end
+
+%% No of CPUs.
+if ~exist('noCPU','var')
+    fprintf('DEFAULT: Using single CPU.\n')
+    parforArg = 0;
+else
+    fprintf('Using %d CPUs.\n',noCPU)
+    parforArg = noCPU;
 end
 
 %% Default interpolation method.
@@ -261,7 +274,7 @@ else %VOXEL-WISE ##########################################################
     counter     = zeros(noVoxels,1);
     %% Loop over all voxels.
     tic
-    for k = 1:noVoxels 
+    parfor (k = 1:noVoxels, parforArg)
         if sum(image(k,:))/act > threshold 
             counter(k) = 1;
             C2         = interp1(midFrame,image(k,:)',t2,interpMethod,'extrap');
