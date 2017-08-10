@@ -1,4 +1,4 @@
-function paramImage = modelFitting_main(varargin)
+function [paramImage,fitInfo] = modelFitting_main(varargin)
 %%
 %****************************************************************************************************
 %| Fits the dynamic PET data to a kinetic model, producing parametric images (voxel-wise) or a set  |
@@ -9,7 +9,7 @@ function paramImage = modelFitting_main(varargin)
 %| N = no of kinetic parameters.                                                                    |
 %| f = no of frames.                                                                                |
 %|                                                                                                  |
-%| USAGE  :   paramImage = modelFitting_main('image',image,...                                      |
+%| USAGE  :   [paramImage,fitInfo] = modelFitting_main('image',image,...                            |
 %|                                    'model','2tissue',...                                         |
 %|                                    'midFrame',[f_1 f_2...f_f-1],...                              |
 %|                                    'w',[w_1 w_2...w_f-1] or e.g. 'w1', 'ones',...                |
@@ -22,9 +22,10 @@ function paramImage = modelFitting_main(varargin)
 %|                                    'halflife', scalar in sec,...                                 |
 %|                                    'noExp',scalar,...                                            |
 %|                                    'interpMethod',string,...                                     |
-%|                                    'solver',string,...                                           |
+%|                                    'dt',dt,...                                                   |
 %|                                    'lowerBound', [lb_1 lb_2...lb_N],...                          |
 %|                                    'upperBound', [ub_1 ub_2...ub_N],...                          |
+%|                                    'options',struct,...                                          |
 %|                                    'noCPU', noCPU)                                               |
 %|                                                                                                  |
 %| INPUT  :   image         4D matrix with dynamic image, unit (arbitrary), e.g. (Bq/ml).           |
@@ -54,11 +55,12 @@ function paramImage = modelFitting_main(varargin)
 %|            halflife      Nuclide halflife in sec, for calculation of some weight types.          |
 %|            noExp         Scalar between 1-inf. Number of exponentials for model 'sumExp'.        |
 %|            interpMethod  String with interpolation method. Default 'linear'.                     |
-%|            solver        String with desired solver algorith. Default []-->'trust-region-refl'.  |
+%|            dt            Time step for equdistant interpolation. Default min(diff(t)).           |
 %|            lowerBound    Vector with lower bound for parameters, unit (1/s) for rate constants.  |
 %|                          lowerBound = [1,N]. Default 0 for all parameters.                       |
 %|            upperBound    Vector with upper bound for parameters, unit (1/s) for rate constants.  |
 %|                          upperBound = [1,N]. Default 100*p0.                                     |
+%|            options       Struct (from optimset) with fitting settings.                           |
 %|            noCPU         Number of CPUs to use (for voxelwise fitting). Default 1.               |
 %|                                                                                                  |
 %| OUTPUT :   paramImage    1) No ROIMask: 4D matrix with parametric image (3D image with a 4th     |
@@ -66,6 +68,7 @@ function paramImage = modelFitting_main(varargin)
 %|                          paramImage = [nx,ny,nz,N].                                              |
 %|                          2) ROIMask specified: vector of parameters for ROI.                     |
 %|                          paramImage = [1,N].                                                     |
+%|            fitInfo       Struct with resnorm,residual,exitflag,output,lambda,jacobian from fit.  |
 %|                                                                                                  |     
 %****************************************************************************************************
 % Copyright 2016, C. Ross Schmidtlein, on behalf of the dPETSTEP development team.
@@ -129,8 +132,10 @@ for i=1:2:numel(varargin)-1
             noExp     = varargin{i+1};  % Scalar (1-inf), number of exponentials for model "sumExp".
         case 'interpMethod'
             interpMethod = varargin{i+1};  % String with interpolation method.
-        case 'solver'
-            solver    = varargin{i+1};  % String with desired solver algorithm. Defaults to []-->"trust-region-reflective".
+        case 'dt'
+            dt = varargin{i+1};          % Scalar with time step for interpolation.
+        case 'options'
+            options    = varargin{i+1};  % Struct with fitting settings (from optimset).
         case 'lowerBound'
             lowerBound   = varargin{i+1};  % Vector with lower bounds for parameters.
         case 'upperBound'
@@ -140,6 +145,7 @@ for i=1:2:numel(varargin)-1
         otherwise
             fprintf('Unknown argument ''%s''.\nExiting...\n',varargin{i});
             paramImage = []; 
+            fitInfo    = [];
             return;
     end
 end
@@ -148,30 +154,41 @@ end
 if ~exist('p0','var')
     fprintf('Start guess (p0) required to know number of parameters!\n')
     paramImage = [];
+    fitInfo    = [];
     return;
 end
+
+%% Double precision
+image = double(image);
 
 %% Number of kinetic parameters.
 noP           = numel(p0);
 
 %% Default upper and lower bounds for fit.
-if ~exist('lowerBound','var')
-    fprintf('DEFAULT: Setting lower parameter bounds to all zeros...\n')
-    lowerBound = zeros(size(p0));
+if strcmp(options.Algorithm,'trust-region-reflective')
+    if ~exist('lowerBound','var')
+        fprintf('DEFAULT: Setting lower parameter bounds to all zeros...\n')
+        lowerBound = zeros(size(p0));
+    end
+    if ~exist('upperBound','var')
+        fprintf('DEFAULT: Setting upper parameter bounds 100*p0...\n')
+        upperBound = 100*p0;
+    end
+else
+    lowerBound = [];
+    upperBound = [];
 end
-if ~exist('upperBound','var')
-    fprintf('DEFAULT: Setting upper parameter bounds 100*p0...\n')
-    upperBound = 100*p0;
-end
-if ~exist('solver','var')
-    solver = [];
+
+%% Fitting options
+if ~exist('options','var')
+    options = optimset('Display','off');
 end
 
 %% No of CPUs.
 if ~exist('noCPU','var')
     fprintf('DEFAULT: Using single CPU.\n')
     parforArg = 0;
-elseif nCPU==1
+elseif noCPU==1
     fprintf('Using single CPU.\n')
     parforArg = 0;
 else
@@ -196,6 +213,7 @@ noVoxels       = sizeIm(1)*sizeIm(2)*sizeIm(3);
 if strcmp('model','sumExp') && ~exist('noExp','var')
     fprtinf('You need to specify "noExp" for model "sumExp"!\n')
     paramImage = [];
+    fitInfo    = [];
     return;
 end
 
@@ -227,25 +245,29 @@ end
 
 %% Settings for chosen model.
 switch modelName
-    case {'1Tissue','1tissue','1-tissue','1-Tissue'}
+    case {'1Tissue','1tissue','1-tissue','1-Tissue','1TISSUE','1-TISSUE'}
         inputFunc = 'Cp'; %model input function
-        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm)   fit_1Tissue_lsqnonlin( t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm); %fit funtion
-    case {'2Tissue','2tissue','2-tissue','2-Tissue'}
+        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,options)   fit_1Tissue_lsqnonlin( t,C,Cp,w,p0,dt,doPlot,LB,UB,options); %fit funtion
+        
+    case {'2Tissue','2tissue','2-tissue','2-Tissue','2TISSUE','2-TISSUE'}
         inputFunc = 'Cp';
-        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm)   fit_2Tissue_lsqnonlin( t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm); %fit funtion
-    case 'FRTM'
+        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,options)   fit_2Tissue_lsqnonlin( t,C,Cp,w,p0,dt,doPlot,LB,UB,options); %fit funtion
+    case {'frtm','FRTM'}
         inputFunc = 'Cref';
-        fitFunc   = @(t,C,Cref,w,p0,dt,doPlot,LB,UB,algorithm) fit_FRTM_lsqnonlin(    t,C,Cref,w,p0,dt,doPlot,LB,UB,algorithm); %fit funtion
-    case 'SRTM'
+        fitFunc   = @(t,C,Cref,w,p0,dt,doPlot,LB,UB,options) fit_FRTM_lsqnonlin(    t,C,Cref,w,p0,dt,doPlot,LB,UB,options); %fit funtion
+    case {'srtm','SRTM'}
         inputFunc = 'Cref';
-        fitFunc   = @(t,C,Cref,w,p0,dt,doPlot,LB,UB,algorithm) fit_SRTM_lsqnonlin(    t,C,Cref,w,p0,dt,doPlot,LB,UB,algorithm); %fit funtion
-    case {'sumExp','sumexp'}
+        fitFunc   = @(t,C,Cref,w,p0,dt,doPlot,LB,UB,options) fit_SRTM_lsqnonlin(    t,C,Cref,w,p0,dt,doPlot,LB,UB,options); %fit funtion
+    case {'sumExp','sumexp','SumExp','SUMEXP'}
         inputFunc = 'Cp';
-        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm)   fit_sumExp_lsqnonlin(  t,C,Cp,w,p0,dt,doPlot,LB,UB,algorithm); %fit funtion
+        fitFunc   = @(t,C,Cp,w,p0,dt,doPlot,LB,UB,options)   fit_sumExp_lsqnonlin(  t,C,Cp,w,p0,dt,doPlot,LB,UB,options); %fit funtion
 end
 
 %% Interpolate to equidistant time step dt (for convolution).
-dt                 = min(diff(midFrame));
+if ~exist('dt','var')
+    fprintf('DEFAULT: Setting time step to min(diff(t))=%f sec...\n',min(diff(midFrame)))
+    dt             = min(diff(midFrame));
+end
 t2                 = (midFrame(1):dt:midFrame(end))';
 w2                 = interpolateWeights(midFrame,w,t2);
 if exist('Cp','var')
@@ -265,7 +287,8 @@ if exist('ROIMask','var') % ROI-WISE ######################################
     C           = pickOutTACFromROI(image,ROIMask,'average');
     C2          = interp1(midFrame,C,t2,interpMethod,'extrap');
     C2(C2<0)    = 0;
-    paramImage  = fitFunc(t2,C2,inputFunc,w2,p0,dt,1,lowerBound,upperBound,solver);
+    [paramImage,fitInfo]  = fitFunc(t2,C2,inputFunc,w2,p0,dt,1,lowerBound,upperBound,options);
+
 else %VOXEL-WISE ##########################################################
     fprintf('Doing voxel-wise fitting of %d voxels...\n',noVoxels)   
     %% Total activity of Cp. Used for thresholding.
@@ -274,19 +297,28 @@ else %VOXEL-WISE ##########################################################
     image       = reshape( image, [noVoxels,numel(midFrame)]);
     %% Allocate parameter matrix.
     p           = zeros(noVoxels,noP);
+    fitInfo     = struct;
     counter     = zeros(noVoxels,1);
     %% Loop over all voxels.
     tic
     parfor (k = 1:noVoxels, parforArg)
+%     for k = 1:noVoxels
         if sum(image(k,:))/act > threshold 
-            counter(k) = 1;
-            C2         = interp1(midFrame,image(k,:)',t2,interpMethod,'extrap');
-            C2(C2<0)   = 0;
-            p(k,:)     = fitFunc(t2,C2,inputFunc,w2,p0,dt,0,lowerBound,upperBound,solver);
+            counter(k)          = 1;
+            C2                  = interp1(midFrame,image(k,:)',t2,interpMethod,'extrap');
+            C2(C2<0)            = 0;
+            [p(k,:),fitInfoTmp] = fitFunc(t2,C2,inputFunc,w2,p0,dt,0,lowerBound,upperBound,options);
+            fitInfo(k).resnorm  = fitInfoTmp.resnorm;
+            fitInfo(k).residual = fitInfoTmp.residual;
+            fitInfo(k).exitflag = fitInfoTmp.exitflag;
+            fitInfo(k).output   = fitInfoTmp.output;
+            fitInfo(k).lambda   = fitInfoTmp.lambda;
+            fitInfo(k).jacobian = fitInfoTmp.jacobian;
         end
     end
+    fprintf(' Done!');
     fprintf('%d voxels of %d above threshold (%.0f%%).\n',sum(counter), noVoxels, 100*sum(counter)/noVoxels)
-    fprintf('Loop time : %.2f minutes (%.2f seconds).\n',toc/60, toc)
+    fprintf('Loop time : %.2f min (%.2f sec).\n',toc/60, toc)
     
     %% Reshape back to image dimensions.
     paramImage    = reshape(p,[sizeIm(1) sizeIm(2) sizeIm(3) noP]);
