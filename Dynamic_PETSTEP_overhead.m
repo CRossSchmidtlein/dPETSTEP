@@ -51,12 +51,13 @@ noFrames   = size(data(CTscanNum).data,4);
 % scanner charaterisitics
 ringData   = simSet.RingData;     % the ring diameter of the scanner's data acquisition (810 mm GE D690)
 tanBin     = simSet.tanBin;       % Sets inital projetion data size (280 matched to GE DSTE)
-psf        = simSet.psf;          % Assumes a PSF for the system, uses same for correction
+radBinSim  = simSet.radBin;       % Sets inital projetion data size (280 matched to GE DSTE)
+psf        = simSet.blurT;        % PSF for the system
+psfCorr    = simSet.psf;          % PSF for correction
 
 % image reconstruction definitions
 simSize    = simSet.simSize;         % Matrix size of reconstructed image 
 postFilter = simSet.postFilter;      % fwhm of post reconstruction filter
-
 
 % Convert CT to mu-map if not already mu-map
 switch data(CTscanNum).type
@@ -95,7 +96,11 @@ vox.muct.nxn = [ data(CTscanNum).dataInfo.sizeOfDimension1 ...
 vox.muct.fov = vox.muct.nxn.*vox.muct.xyz;
 
 % Get Simulation PET/CT voxel size in mm and data
-radBin = floor(4*tanBin * asin( vox.pet.fov(1) / ringData )/pi - 1);
+if isempty(radBinSim) %Calculate #rad bin from scanner diameter
+    radBin = floor(4*tanBin * asin( vox.pet.fov(1) / ringData )/pi - 1);
+else
+    radBin = ceil( (radBinSim-3)/sqrt(2)-1 );
+end
 if (mod(radBin,2) == 0), radBin = radBin + 1 ; end
 vox.petSim.xyz = vox.pet.xyz .* [ vox.pet.nxn(1:2)/radBin 1 ];
 vox.petSim.vol = prod(vox.petSim.xyz);
@@ -105,16 +110,18 @@ vox.petSim.r   = 2*ceil(norm( vox.petSim.nxn(1:2) - floor(( vox.petSim.nxn(1:2)-
 vox.petSim.tan = tanBin;
 vox.petSim.rtz = [ 2*ceil(norm( vox.petSim.nxn(1:2) - floor(( vox.petSim.nxn(1:2)-1 )/2)-1)) + 3 ...
                    tanBin vox.pet.nxn(3) ];
-vox.petSim
+fprintf('Simulation sizes :\n\t xyz: [%.2f %.2f %.2f]\n\t vol: %.2f\n\t nxn: [%.2f %.2f %.2f]\n\t fov: [%.2f %.2f %.2f]\n\t rtz: [%.2f %.2f %.2f]\n',...
+            vox.petSim.xyz,vox.petSim.vol,vox.petSim.nxn,vox.petSim.fov,vox.petSim.rtz)
 
 % Get Output Image PET voxel size in mm and data
 vox.petOut.xyz = vox.pet.xyz .* [ vox.pet.nxn(1:2)/simSize 1 ];
 vox.petOut.vol = prod(vox.petOut.xyz);
 vox.petOut.nxn = [simSize simSize vox.pet.nxn(3)];
 vox.petOut.fov = vox.petOut.nxn.*vox.petOut.xyz;
-vox.petOut.rtz = [ 2*ceil(norm( vox.petOut.nxn(1:2) - floor(( vox.petOut.nxn(1:2)-1 )/2)-1)) + 3 ...
+vox.petOut.rtz = [ 2*ceil(norm( vox.petOut.nxn(1:2) - floor(( vox.petOut.nxn(1:2)-1 )/2)-1 )) + 3 ...
                    tanBin vox.pet.nxn(3) ];
-vox.petOut;
+fprintf('Output sizes :\n\t xyz: [%.2f %.2f %.2f]\n\t vol: %.2f\n\t nxn: [%.2f %.2f %.2f]\n\t fov: [%.2f %.2f %.2f]\n',...
+            vox.petOut.xyz,vox.petOut.vol,vox.petOut.nxn,vox.petOut.fov)
 
 %% Z-axis slice sentivity correction
 if (mod(vox.petSim.rtz(3),2) == 1)
@@ -126,24 +133,44 @@ sensScale(sensScale>(simSet.maxRingDiff+1)) = max( sensScale( sensScale<=(simSet
 sensScale = sensScale/mean(sensScale);
 
 % PSF kernel matched to simulation size
-fwhm        = psf * vox.petSim.nxn(1) / vox.pet.fov(1);
-fwhmMat     = max( ceil(3*fwhm) , 5 );
-if (mod(fwhmMat,2) == 0)
-    fwhmMat = fwhmMat + 1; 
+if psf>0
+    fwhm        = psf * vox.petSim.nxn(1) / vox.pet.fov(1);
+    fwhmMat     = max( ceil(3*fwhm) , 5 );
+    if (mod(fwhmMat,2) == 0)
+        fwhmMat = fwhmMat + 1;
+    end
+    PSFsim     = fspecial('gaussian', fwhmMat, fwhm / ( 2*sqrt(2*log(2)) ) );
+else
+    PSFsim = 1;
 end
-PSFsim     = fspecial('gaussian', fwhmMat, fwhm / ( 2*sqrt(2*log(2)) ) );
 
 % PSF kernel matched to output size
-fwhm        = psf * vox.petOut.nxn(1) / vox.pet.fov(1);
-fwhmMat     = max( ceil(3*fwhm) , 5 );
-if (mod(fwhmMat,2) == 0), fwhmMat = fwhmMat + 1; end
-PSFout     = fspecial('gaussian', fwhmMat, fwhm / ( 2*sqrt(2*log(2)) ) );
+if ~isempty(psfCorr)
+    if psfCorr>0
+        fwhm        = psfCorr * vox.petOut.nxn(1) / vox.pet.fov(1);
+        fwhmMat     = max( ceil(3*fwhm) , 5 );
+        if (mod(fwhmMat,2) == 0), fwhmMat = fwhmMat + 1; end
+        PSFout     = fspecial('gaussian', fwhmMat, fwhm / ( 2*sqrt(2*log(2)) ) );
+    else
+        PSFout = 1;
+    end
+else
+    PSFout = [];
+end
 
 % Post smoothing kernel matched to output size
-fwhmPost    = postFilter * vox.petOut.nxn(1) / vox.pet.fov(1);
-fwhmMatPost = max( ceil(3*fwhmPost) , 5 );
-if (mod(fwhmMatPost,2) == 0), fwhmMatPost = fwhmMatPost + 1; end
-POST        = fspecial('gaussian', fwhmMatPost, fwhmPost / ( 2*sqrt(2*log(2)) ) );
+if ~isempty(postFilter)
+    if postFilter>0
+        fwhmPost    = postFilter * vox.petOut.nxn(1) / vox.pet.fov(1);
+        fwhmMatPost = max( ceil(3*fwhmPost) , 5 );
+        if (mod(fwhmMatPost,2) == 0), fwhmMatPost = fwhmMatPost + 1; end
+        POST        = fspecial('gaussian', fwhmMatPost, fwhmPost / ( 2*sqrt(2*log(2)) ) );
+    else
+        POST = 1;
+    end
+else
+    POST = [];
+end
 
 % scatter kernel
 scatterFWHM  = 200; %(mm)
