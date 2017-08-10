@@ -1,4 +1,4 @@
-function [p] = fit_2Tissue_lsqnonlin(t, C, Cp, w, p0, dt, doPlot, lowerBounds, upperBounds, algorithm)
+function [p,fitInfo] = fit_2Tissue_lsqnonlin(t, C, Cp, w, p0, dt, doPlot, lowerBounds, upperBounds, options)
 %%
 %*******************************************************************************************************
 %| Fits a response TAC to the 2-tissue compartment model, from given time sampling, input function     |
@@ -9,7 +9,7 @@ function [p] = fit_2Tissue_lsqnonlin(t, C, Cp, w, p0, dt, doPlot, lowerBounds, u
 %| f  = number of frames.                                                                              |
 %| np = number of model parameters = 4 or 5.                                                           |
 %|                                                                                                     |
-%| USAGE  :  p = fit_2Tissue_lsqnonlin(t,C,Cp,w,p0,dt,doPlot,lowerBounds,upperBounds,algorithm).       |
+%| USAGE  :  p = fit_2Tissue_lsqnonlin(t,C,Cp,w,p0,dt,doPlot,lowerBounds,upperBounds,options).         |
 %|                                                                                                     |
 %| INPUT  :  t              Vector of mid frame times (evenly sampled), size [(f-1),1], unit (s).      |
 %|                          t = [t_1; t_2; ... ;t_f-1].                                                |
@@ -26,10 +26,12 @@ function [p] = fit_2Tissue_lsqnonlin(t, C, Cp, w, p0, dt, doPlot, lowerBounds, u
 %|           doPlot         Flag to plot fitted solution (1) or not (0).                               |
 %|           lowerBounds    Vector with lower bounds for estimate of p, size [1,np]. Default zero.     |
 %|           upperBounds    Vector with upper bounds for estimate of p, size [1,np]. Default 100*p0.   |
-%|           algorithm      String with desired fitting algorithm. Default 'trust-region-reflective'.  |
+%|           options        Structure with options for fitting (from optimset). Empty-->using defaults.|
+%|                          options.MaxIter = 1000, options.Algorithm = 'trust-region-reflective',...  |
 %|                                                                                                     |
 %| OUTPUT :  p              Vector with fitted model parameters, size [1,np].                          |
 %|                          p = [K1 k2 k3 k4 (Vp)].                                                    |
+%|           fitInfo        Struct with resnorm,residual,exitflag,output,lambda,jacobian from fit.     |
 %|      |    __|______________________________________                                                 |
 %|      |Cp |  |   K1   _________   k3    _________   |                                                |
 %|      |   |  |------>|         |------>|         |  |                                                |
@@ -79,25 +81,16 @@ else
     spillover = 0; 
 end 
 
-%% Bounds for the model parameters [K1 k2 k3 k4 (Vp)].
-if isempty(lowerBounds)
-    lowerBounds = zeros(size(p0));
+%% Options
+if isempty(options)
+    options = optimset('Display','off');
 end
-if isempty(upperBounds)
-    upperBounds = p0*100;
-end
-
-%% Algorithm for fit
-if isempty(algorithm)
-    algorithm = 'trust-region-reflective';
-end
-
-%% Desired fitting options.
-options     = optimset('MaxFunEvals',1000,'MaxIter',1000,'Display','off','TolFun',1e-8,'Algorithm',algorithm);
 
 %% Non-linear fitting.
-p = lsqnonlin(@fitFunction,p0,lowerBounds,upperBounds,options,t,C,Cp,w,dt,spillover);
- 
+fitInfo = struct;
+[p,fitInfo.resnorm,fitInfo.residual,fitInfo.exitflag,fitInfo.output,fitInfo.lambda,fitInfo.jacobian] = ...
+    lsqnonlin(@fitFunction,p0,lowerBounds,upperBounds,options,t,C,Cp,w,dt,spillover);
+
 %% Plot measured and fitted TAC.
 if doPlot
     figNo    = 1;

@@ -1,4 +1,4 @@
-function [p] = fit_SRTM_lsqnonlin(t, C, Cref, w, p0, dt, doPlot, lowerBounds, upperBounds, algorithm)
+function [p,fitInfo] = fit_SRTM_lsqnonlin(t, C, Cref, w, p0, dt, doPlot, lowerBounds, upperBounds, options)
 %%
 %*******************************************************************************************************
 %| Fits a response TAC to the SRTM compartment model, from given time sampling, reference tissue TAC   |
@@ -9,7 +9,7 @@ function [p] = fit_SRTM_lsqnonlin(t, C, Cref, w, p0, dt, doPlot, lowerBounds, up
 %| f  = number of frames.                                                                              |
 %| np = number of model parameters = 3.                                                                |
 %|                                                                                                     |
-%| USAGE  :  p = fit_SRTM_lsqnonlin(t,C,Cref,w,p0,dt,doPlot,lowerBounds,upperBounds,algorithm).        |
+%| USAGE  :  p = fit_SRTM_lsqnonlin(t,C,Cref,w,p0,dt,doPlot,lowerBounds,upperBounds,options).          |
 %|                                                                                                     |
 %| INPUT  :  t              Vector of mid frame times (evenly sampled), size [(f-1),1], unit (s).      |
 %|                          t = [t_1; t_2; ... ;t_f-1].                                                |
@@ -26,10 +26,12 @@ function [p] = fit_SRTM_lsqnonlin(t, C, Cref, w, p0, dt, doPlot, lowerBounds, up
 %|           doPlot         Flag to plot fitted solution (1) or not (0).                               |
 %|           lowerBounds    Vector with lower bounds for estimate of p, size [1,np]. Default zero.     |
 %|           upperBounds    Vector with upper bounds for estimate of p, size [1,np]. Default 100*p0.   |
-%|           algorithm      String with desired fitting algorithm. Default 'trust-region-reflective'.  |
+%|           options        Structure with options for fitting (from optimset). Empty-->using defaults.|
+%|                          options.MaxIter = 1000, options.Algorithm = 'trust-region-reflective',...  |
 %|                                                                                                     |
 %| OUTPUT :  p              Vector with fitted model parameters, size [1,np].                          |
 %|                          p = [R1 k2 BPnd].                                                          |
+%|           fitInfo        Struct with resnorm,residual,exitflag,output,lambda,jacobian from fit.     |
 %|    _____________________________________                                                            |
 %|   |                                     |                                                           |
 %|   |  |    |   K1   __________________   |                                                           |
@@ -78,24 +80,15 @@ function [p] = fit_SRTM_lsqnonlin(t, C, Cref, w, p0, dt, doPlot, lowerBounds, up
 % along with dPETSTEP.  If not, see <http://www.gnu.org/licenses/>.
 %******************************************************************************************************
 
-%% Bounds for the model parameters [R1,k2,BPnd].
-if isempty(lowerBounds)
-    lowerBounds = zeros(size(p0));
+%% Options
+if isempty(options)
+    options = optimset('Display','off');
 end
-if isempty(upperBounds)
-    upperBounds = p0*100;
-end
-
-%% Algorithm for fit
-if isempty(algorithm)
-    algorithm = 'trust-region-reflective';
-end
-
-%% Desired fitting options.
-options     = optimset('MaxFunEvals',1000,'MaxIter',1000,'Display','off','TolFun',1e-8,'Algorithm',algorithm);
 
 %% Non-linear fitting.
-p = lsqnonlin(@fitFunction,p0,lowerBounds,upperBounds,options,t,C,Cref,w,dt);
+fitInfo = struct;
+[p,fitInfo.resnorm,fitInfo.residual,fitInfo.exitflag,fitInfo.output,fitInfo.lambda,fitInfo.jacobian] = ...
+    lsqnonlin(@fitFunction,p0,lowerBounds,upperBounds,options,t,C,Cref,w,dt);
  
 %% Plot measured and fitted TAC.
 if doPlot
