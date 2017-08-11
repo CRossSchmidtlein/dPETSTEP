@@ -22,7 +22,7 @@ function varargout = dPETSTEPgui_sim(varargin)
 
     % Edit the above text to modify the response to help test
 
-    % Last Modified by GUIDE v2.5 10-Aug-2017 15:35:44
+    % Last Modified by GUIDE v2.5 11-Aug-2017 10:17:01
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -200,7 +200,7 @@ end
 function frameFromFile_Callback(hObject, eventdata, handles)
 
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Reset color
     set(handles.frameName,'BackgroundColor', [1 1 1] );
@@ -542,7 +542,7 @@ end
 
 function ifFromFile_Callback(hObject, eventdata, handles)
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Reset color
     set(handles.inputFuncName,'BackgroundColor', [1 1 1] );
@@ -1165,7 +1165,7 @@ end
  
 function zfilterFromFile_Callback(hObject, eventdata, handles)
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Reset color
     set(handles.postfilterZ,'BackgroundColor', [1 1 1] );

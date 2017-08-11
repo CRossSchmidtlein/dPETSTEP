@@ -22,7 +22,7 @@ function varargout = dPETSTEPgui_fit(varargin)
 
     % Edit the above text to modify the response to help test
 
-    % Last Modified by GUIDE v2.5 08-Aug-2017 16:57:00
+    % Last Modified by GUIDE v2.5 11-Aug-2017 10:17:40
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -476,7 +476,7 @@ end
 function frameFromFile_Callback(hObject, eventdata, handles)
 
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Reset color
     set(handles.frameName,'BackgroundColor', [1 1 1] );
@@ -574,7 +574,7 @@ end
 
 function ifFromFile_Callback(hObject, eventdata, handles)
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Put file name in box
     handles.inputFuncName.String = fullfile(pathName,fileName);
@@ -699,7 +699,7 @@ function weightFromFile_Callback(hObject, eventdata, handles)
     handles.weightNameText.Enable = 'on';
     
     %% Pick file
-    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.csv*'},'Pick a file');
+    [fileName,pathName] = uigetfile({'*.mat;*.txt;*.xls*'},'Pick a file');
     
     %% Reset color
     set(handles.weightName,'BackgroundColor', [1 1 1] );
