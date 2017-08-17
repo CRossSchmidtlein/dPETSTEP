@@ -56,14 +56,18 @@ else
 end
 
 %% Read input function from WS or file
-if handles.ifFromWS.Value==1 %selected read from WS
-    Cif   = evalin('base',handles.inputFuncName.String);
+if strcmp(handles.ifFromWS.Enable,'off')
+    Cif = [];
 else
-    [~,~,ext] = fileparts(handles.inputFuncName.String);
-    if strcmp(ext,'.mat') %MAT-file
-        Cif = cell2mat(struct2cell( load(handles.inputFuncName.String) ));
-    else %Text file
-        Cif = load(handles.inputFuncName.String);
+    if handles.ifFromWS.Value==1 %selected read from WS
+        Cif   = evalin('base',handles.inputFuncName.String);
+    else
+        [~,~,ext] = fileparts(handles.inputFuncName.String);
+        if strcmp(ext,'.mat') %MAT-file
+            Cif = cell2mat(struct2cell( load(handles.inputFuncName.String) ));
+        else %Text file
+            Cif = load(handles.inputFuncName.String);
+        end
     end
 end
 
