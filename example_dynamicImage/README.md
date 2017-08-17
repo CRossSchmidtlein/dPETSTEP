@@ -2,6 +2,16 @@ ex_dPETSTEP_dynamicImage
 
 An example data file and a script to run a simulation and subsequent model parameter fitting of the simulated data.
 
-1. Unpack the zip file. It contains two files, one with data and one with a main script.
-2. Run the main script from Matlab prompt:
-   >> main_ex_dPETSTEP_dynamicImage
+1.   Unpack the zip file. It contains three files, one with data, one with a main script, and one with loadable settings for GUI usage.
+
+2.   Run the simulation either:
+
+2.1. Via GUI in Matlab:
+
+	 >> dPETSTEPgui_sim
+	 
+	 load the settings .xls file
+	
+2.2. Via the main script from Matlab prompt:
+
+    >> main_ex_dPETSTEP_dynamicImage
