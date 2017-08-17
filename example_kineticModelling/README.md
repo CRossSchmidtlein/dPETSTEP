@@ -7,6 +7,7 @@ An example data file and a script to run a simulation and subsequent model param
 2.   Run the simulation either:
 
 2.1. Via GUI in Matlab:
+
 	 >> dPETSTEPgui_sim
 	 
 	 load the settings .xls file
