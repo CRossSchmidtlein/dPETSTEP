@@ -6,6 +6,6 @@ An example data file for model parameter fitting of the simulated data.
 
 2. Run the fitting via GUI in Matlab:
 	
-   >> dPETSTEPgui_fit
+     >> dPETSTEPgui_fit
 	
    load the settings .xls file by pressing "Load" button in GUI
