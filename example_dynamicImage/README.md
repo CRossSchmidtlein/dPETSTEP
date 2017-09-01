@@ -8,14 +8,14 @@ An example data file and a script to run a simulation and subsequent model param
 
 2.1. Via GUI in Matlab:
 
-     ```
+```
      >> dPETSTEPgui_sim
-     ```	 
+```	 
 
 load the settings .xls file by pressing "Load" button in GUI
 	
 2.2. Via the main script from Matlab prompt:
 
-     ```
+```
      >> main_ex_dPETSTEP_dynamicImage
-     ```
+```
