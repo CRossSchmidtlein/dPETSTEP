@@ -231,16 +231,6 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.timeSlider,'Max',timeSliderMax);
     set(handles.textTotalTime,'String',[ '/ ', num2str(timeSliderMax)] );
 
-    % Inactivate sliders if max = min
-    if sliceSliderMin == sliceSliderMax
-        handles.sliceSlider.Enable = 'off'; 
-%         handles.sliceSlider.Visible = 'off'; 
-    end
-    if timeSliderMin == timeSliderMax 
-        handles.timeSlider.Enable = 'off';
-%         handles.timeSlider.Visible = 'off'; 
-    end
-
     lowSliderMin    = (min(handles.data(:)));
     lowSliderMax    = (max(handles.data(:)));
     if (lowSliderMax == lowSliderMin)
@@ -281,6 +271,16 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.highSlider,'Value' ,handles.highLevel);
     set(handles.highNumber,'String',num2str(handles.highLevel));
  
+    % Inactivate sliders if max = min
+    if sliceSliderMin == sliceSliderMax
+        set(handles.sliceSlider,'Enable','off'); 
+%         handles.sliceSlider.Visible = 'off'; 
+    end
+    if timeSliderMin == timeSliderMax 
+        set(handles.timeSlider,'Enable','off');
+%         handles.timeSlider.Visible = 'off'; 
+    end
+    
     % Sizes of the shown 2D data
     handles.xMin    = 1;
     handles.xMax    = size(handles.data,2);
@@ -403,9 +403,9 @@ function varargout = traPushbutton_Callback(hObject, eventdata, handles)
     
     % Inactivate sliders if max = min
     if size(handles.data,3)==1
-        handles.sliceSlider.Enable = 'off';
+        set(handles.sliceSlider,'Enable','off');
     else
-        handles.sliceSlider.Enable = 'on';
+        set(handles.sliceSlider,'Enable','on');
     end
 
     % Update text info at top
@@ -505,9 +505,9 @@ function sagPushbutton_Callback(hObject, eventdata, handles)
     
     % Inactivate sliders if max = min
     if size(handles.data,2)==1
-        handles.sliceSlider.Enable = 'off';
+        set(handles.sliceSlider,'Enable','off');
     else
-        handles.sliceSlider.Enable = 'on';
+        set(handles.sliceSlider,'Enable','on');
     end
 
     % Update text info at top
@@ -597,9 +597,9 @@ function corPushbutton_Callback(hObject, eventdata, handles)
     
     % Inactivate sliders if max = min
     if size(handles.data,1)==1
-        handles.sliceSlider.Enable = 'off';
+        set( handles.sliceSlider,'Enable','off');
     else
-        handles.sliceSlider.Enable = 'on';
+        set( handles.sliceSlider,'Enable','on');
     end
 
     % Update text info at top
