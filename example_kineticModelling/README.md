@@ -4,16 +4,23 @@ An example data file and a script to run a simulation and subsequent model param
 
 1. Unpack the zip file. It contains three files, one with data, one with a main script, and one with loadable settings for GUI usage.
 
-2. Run the simulation either:
 
-   2.1. Via GUI in Matlab:
+2. Load the data into Matlab:
+
+```
+   >> load data_ex_dPETSTEP_kineticModelling.mat
+```
+
+3. Run the simulation either:
+
+   3.1. Via GUI in Matlab:
    
 ```
    >> dPETSTEPgui_sim
 ```
    load the settings .xls file by pressing "Load" button in GUI
 	
-   2.2 Via the main script from Matlab prompt:
+   3.2 Via the main script from Matlab prompt:
    
    Open up and adjust the settings in file "Dynamic_setSimParameters.m" prior to running main file.
 ```
