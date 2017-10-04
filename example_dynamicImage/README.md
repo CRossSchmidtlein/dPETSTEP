@@ -6,17 +6,18 @@ An example data file and a script to run a simulation and subsequent model param
 
 2. Run the simulation either:
 
-	2.1. Via GUI in Matlab:
+   2.1. Via GUI in Matlab:
 
 ```
    >> dPETSTEPgui_sim
 ```	 
 
-	load the settings .xls file by pressing "Load" button in GUI
+   load the settings .xls file by pressing "Load" button in GUI
 	
-	2.2. Via the main script from Matlab prompt:
+   2.2. Via the main script from Matlab prompt:
 
-	Open up and adjust the settings in file "Dynamic_setSimParameters.m" prior to running main file.
+   Open up and adjust the settings in file "Dynamic_setSimParameters.m" prior to running main file.
+   
 ```
    >> main_ex_dPETSTEP_dynamicImage
 ```
