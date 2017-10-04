@@ -63,6 +63,7 @@ simSet.kineticModel   = 'sumExp';		% Desired kinetic model, '1-Tissue', '2-Tissu
 
 % scanner charaterisitics
 simSet.RingData   = 880;%430        % the diameter of the scanner ring (GE DLS)
+simSet.radBin     = 281;        % Number of radial bins.
 simSet.tanBin     = 336;        % Sets inital projetion data size (GE DLS)
 simSet.maxRingDiff= 11;         % Maximum allowed ring difference
 simSet.psf        = 5.1;        % Assumes a PSF for the system, uses same for correction. FWHM.
