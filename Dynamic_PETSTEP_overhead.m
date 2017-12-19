@@ -46,7 +46,7 @@ function [vox,PSFsim,PSFout,POST,scatterK,FWAC,initPT,sensScale,activityConc] = 
 %% input parameters
 PTscanNum  = simSet.PTscanNum;       % PET scan's ID : should be automated
 CTscanNum  = simSet.CTscanNum;       % CT  scan's ID : should be automated
-noFrames   = size(data(CTscanNum).data,4);
+noFrames   = size(data(PTscanNum).data,4);
 
 % scanner charaterisitics
 ringData   = simSet.RingData;     % the ring diameter of the scanner's data acquisition (810 mm GE D690)
