@@ -949,16 +949,24 @@ function colormaps_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     names = get(hObject,'String');
-    colormap( handles.figure1, names{get(hObject,'Value')} );
+%     handles.figure1.Colormap = colormap(names{get(hObject,'Value')});
+%     colormap( handles.figure1, names{get(hObject,'Value')} );
     if isfield(handles,'colorbar')
         tmp = get(handles.colormaps,'String');
         colormap( handles.colorbar, tmp{get(handles.colormaps,'Value')} );
+%         handles.figure1.Colormap = tmp{get(handles.colormaps,'Value')};
+%         colormap( handles.figure1, tmp{get(handles.colormaps,'Value')} );
+        handles.figure1.Colormap = colormap(names{get(hObject,'Value')});
+        colormap( handles.axes1, tmp{get(handles.colormaps,'Value')} );
     end
     mycmap = get(handles.figure1,'Colormap');
+%     mycmap = get(handles.axes1,'Colormap');
     if (get(handles.invertCheckbox,'Value') == 1)
 %         set(handles.figure1,'Colormap',flipud(mycmap))
 %         set(handles.colorbar,'Colormap',flipud(mycmap))
-        colormap( handles.figure1, flipud(mycmap) );
+%         colormap( handles.figure1, flipud(mycmap) );
+        handles.figure1.Colormap = flipud(mycmap);
+        colormap( handles.axes1, flipud(mycmap) );
         colormap( handles.colorbar, flipud(mycmap) );
     end
     
@@ -1602,7 +1610,17 @@ function handles = drawImagePlusROI(handles)
             set( handles.colorbar, 'Limits',[handles.lowLevel handles.highLevel] );
 %             set( handles.colorbar, 'LimitsMode','auto' );
             colormap( handles.colorbar, handles.colormaps.String{get(handles.colormaps,'Value')} );
+            colormap( handles.figure1, handles.colormaps.String{get(handles.colormaps,'Value')} );
+            colormap( handles.axes1, handles.colormaps.String{get(handles.colormaps,'Value')} );
             caxis(handles.axesColorbar,[handles.lowLevel handles.highLevel]);
+            
+            mycmap = get(handles.figure1,'Colormap');
+            if (get(handles.invertCheckbox,'Value') == 1)
+                handles.figure1.Colormap = flipud(mycmap);
+                colormap( handles.axes1, flipud(mycmap) );
+                colormap( handles.colorbar, flipud(mycmap) );
+            end
+    
         end
     end
    
@@ -2075,12 +2093,15 @@ function invertCheckbox_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     
 %     mycmap = colormap;
+%     mycmap = get(handles.axes1,'Colormap');
     mycmap = get(handles.figure1,'Colormap');
 %     mycmap = colormap( handles.colormaps.String{get(handles.colormaps,'Value')} );
 %     handles.figure1.Colormap = flipud(mycmap);
 %     handles.colorbar.Colormap = flipud(mycmap);
 %     mycmap = get(handles.figure1,'Colormap');
-    colormap(handles.figure1,flipud(mycmap))
+    handles.figure1.Colormap = flipud(mycmap);
+%     colormap(handles.figure1,flipud(mycmap))
+    colormap(handles.axes1,flipud(mycmap) );
     colormap(handles.colorbar,flipud(mycmap))
 %     colormap( handles.colorbar, handles.colormaps.String{get(handles.colormaps,'Value')} );
 
